@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: write
+  id-token: write   # required for npm provenance
 
 jobs:
   build:
@@ -17,8 +18,9 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
+        node-version: '20'
+        cache: 'npm'
+        registry-url: 'https://registry.npmjs.org'
 
       - name: Install dependencies
         run: npm ci
@@ -32,37 +34,42 @@ jobs:
       - name: Build release artifacts
         run: bash scripts/build-release.sh
 
+      - name: Publish to npm
+        run: npm publish --provenance --access public
+        env:
+        NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
-          files: dist/release/*
-          body: |
-            ## Changes
+        files: dist/release/*
+        body: |
+          ## Changes
 
-            See [commits](https://github.com/ppotepa/ctxrun/commits/${{ github.ref_name }}) for full changelog.
+          See [commits](https://github.com/ppotepa/ctxrun/commits/${{ github.ref_name }}) for full changelog.
 
-            ## Install
+          ## Install
 
-            ```bash
-            # One-liner
-            curl -fsSL https://raw.githubusercontent.com/ppotepa/ctxrun/main/install.sh | bash
+          ```bash
+          # One-liner
+          curl -fsSL https://raw.githubusercontent.com/ppotepa/ctxrun/main/install.sh | bash
 
-            # npm
-            npm install -g ctxrun
+          # npm
+          npm install -g @ppotepa/ctxrun
 
-            # Debian/Ubuntu
-            sudo dpkg -i ctxrun_*.deb
+          # Debian/Ubuntu
+          sudo dpkg -i ctxrun_*.deb
 
-            # Tarball
-            tar xzf ctxrun-v*.tar.gz
-            export PATH=$PATH:$(pwd)/ctxrun/dist/cli
-            ```
+          # Tarball
+          tar xzf ctxrun-v*.tar.gz
+          export PATH=$PATH:$(pwd)/ctxrun/dist/cli
+          ```
 
-            ## Verify
+          ## Verify
 
-            ```bash
-            ctxrun --version
-            ctxrun doctor
-            ctxrun plugins list
-            ```
+          ```bash
+          ctxrun --version
+          ctxrun doctor
+          ctxrun plugins list
+          ```
         draft: false
