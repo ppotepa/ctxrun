@@ -358,28 +358,14 @@ git tag -a v0.X.Y -m "Release v0.X.Y"
 git push origin v0.X.Y
 ```
 
-The GitHub Actions workflow will:
-1. Build and test the code
-2. Create npm tarball
-3. Build .deb package
-4. Generate SHA256SUMS
-5. Create a GitHub Release with all artifacts
+The CI workflow (`release.yml`) will build, test, package, and publish to GitHub Releases automatically.
 
-Alternatively, build locally:
+To build locally:
 
 ```bash
-# Build npm tarball and SHA256SUMS
 npm run build
-mkdir -p dist/release
-npm pack --pack-destination dist/release
-cd dist/release && sha256sum * > SHA256SUMS
-
-# Build .deb with Docker
-docker build -f Dockerfile.release -t ctxrun-builder --build-arg VERSION=0.X.Y .
-docker run --rm -v $(pwd)/dist/release:/dist/release ctxrun-builder
-
-# Upload to GitHub Release
-gh release create vX.Y.Z dist/release/* --notes "Release notes here"
+bash scripts/build-release.sh   # creates dist/release/*.deb, *.tgz, SHA256SUMS
+gh release create v0.X.Y dist/release/* --notes "Release notes"
 ```
 
 ## Contributing

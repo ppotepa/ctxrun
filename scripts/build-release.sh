@@ -28,8 +28,10 @@ cp -r dist "$STAGING/usr/lib/ctxrun/"
 cp package.json LICENSE README.md "$STAGING/usr/lib/ctxrun/"
 
 # Create wrapper script
+# Preserve SUDO_USER so ctxrun can detect the real user when run via sudo
 cat > "$STAGING/usr/bin/ctxrun" << 'WRAPPER'
 #!/bin/bash
+export SUDO_USER="${SUDO_USER:-}"
 exec node /usr/lib/ctxrun/dist/cli/index.js "$@"
 WRAPPER
 chmod +x "$STAGING/usr/bin/ctxrun"

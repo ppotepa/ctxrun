@@ -38,24 +38,31 @@ jobs:
           files: dist/release/*
           body: |
             ## Changes
-            See the commit log for details.
-            
-            ## Installation
-            
-            ### npm
+
+            See [commits](https://github.com/ppotepa/ctxrun/commits/${{ github.ref_name }}) for full changelog.
+
+            ## Install
+
             ```bash
+            # One-liner
+            curl -fsSL https://raw.githubusercontent.com/ppotepa/ctxrun/main/install.sh | bash
+
+            # npm
             npm install -g ctxrun
-            ```
-            
-            ### .deb (Debian/Ubuntu)
-            ```bash
+
+            # Debian/Ubuntu
             sudo dpkg -i ctxrun_*.deb
-            ```
-            
-            ### Manual (tarball)
-            Extract and add to PATH:
-            ```bash
+
+            # Tarball
             tar xzf ctxrun-v*.tar.gz
             export PATH=$PATH:$(pwd)/ctxrun/dist/cli
+            ```
+
+            ## Verify
+
+            ```bash
+            ctxrun --version
+            ctxrun doctor
+            ctxrun plugins list
             ```
         draft: false
