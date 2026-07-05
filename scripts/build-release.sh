@@ -41,7 +41,7 @@ if command -v fpm &> /dev/null; then
   fpm -s dir -t deb \
     --name ctxrun \
     --version "${VERSION}" \
-    --release "${RELEASE}" \
+    --iteration "${RELEASE}" \
     --architecture all \
     --description "Run commands with an explicit user context across sudo/root boundaries." \
     --url "https://github.com/ppotepa/ctxrun" \
