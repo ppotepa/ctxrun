@@ -1,0 +1,34 @@
+{
+  "name": "ctxrun",
+  "version": "0.1.0",
+  "description": "Run commands with an explicit user context across sudo/root boundaries.",
+  "type": "module",
+  "bin": {
+    "ctxrun": "./dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "check": "tsc -p tsconfig.json --noEmit",
+    "dev": "node --loader ts-node/esm src/cli.ts"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "keywords": [
+    "sudo",
+    "cli",
+    "context",
+    "github-cli",
+    "git"
+  ],
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0"
+  }
+}
