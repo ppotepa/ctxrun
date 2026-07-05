@@ -307,6 +307,35 @@ node dist/cli.js plugins list
 node dist/cli.js doctor
 ```
 
+## End-to-end tests
+
+`e2e/` contains a Docker-based e2e suite that exercises `ctxrun` the way it is
+actually meant to be used: a non-root user (`devuser`) with seeded Git/GitHub
+CLI/AWS/kubectl/Docker/gcloud/pip config in their home directory, running
+`sudo ctxrun <preset>`. Scenarios assert that the resulting environment
+reflects `devuser`'s context, not `root`'s.
+
+```bash
+npm run test:e2e
+```
+
+This builds a Debian-based image (`e2e/Dockerfile`) with `ctxrun` linked
+globally, then runs every script in `e2e/scenarios/*.sh` inside the
+container via `e2e/run-e2e.sh`, printing a pass/fail summary and exiting
+non-zero if any scenario fails. Scenarios covered today:
+
+- `codex` preset preserves the target user's HOME/Git/GitHub/Codex context under `sudo`.
+- `extends`-based presets (`codex-aws`, `codex-cloud`) correctly merge plugin lists.
+- `ctxrun <preset>` shorthand produces identical output to `ctxrun run <preset>`.
+- `doctor` reports `ok` for every seeded config file.
+- `plugins list` shows composed presets with their fully merged plugin list.
+- Running without `sudo` uses the current user's own context (no `SUDO_USER`).
+
+Add new scenarios by dropping another `NN-description.sh` script into
+`e2e/scenarios/`; it will be picked up automatically. Scripts can source
+`e2e/lib.sh` for `assert_contains`/`assert_not_contains`/`assert_equal`
+helpers.
+
 ## Distribution Plan
 
 The planned distribution channels are:
