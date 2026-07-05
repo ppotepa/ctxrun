@@ -25,10 +25,10 @@ COPY src ./src
 RUN npm ci && npm run build
 
 # Create a staging directory with the final structure
-RUN mkdir -p /tmp/staging/usr/bin /tmp/staging/usr/share/doc/ctxrun
+RUN mkdir -p /tmp/staging/usr/bin /tmp/staging/usr/share/doc/ctxrun /tmp/staging/usr/lib/ctxrun
 
 # Copy the compiled code to staging
-RUN cp -r dist /tmp/staging/usr/lib/ctxrun && \
+RUN cp -r dist /tmp/staging/usr/lib/ctxrun/ && \
     cp package.json /tmp/staging/usr/lib/ctxrun/ && \
     cp LICENSE /tmp/staging/usr/lib/ctxrun/ && \
     cp README.md /tmp/staging/usr/lib/ctxrun/
@@ -49,7 +49,7 @@ RUN cd /tmp && \
     fpm -s dir -t deb \
       --name ctxrun \
       --version "${VERSION}" \
-      --release "${RELEASE}" \
+      --iteration "${RELEASE}" \
       --architecture all \
       --description "Run commands with an explicit user context across sudo/root boundaries." \
       --url "https://github.com/ppotepa/ctxrun" \
