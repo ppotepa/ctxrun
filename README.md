@@ -50,12 +50,28 @@ Each plugin contributes only the environment variables and checks required for i
 
 ## Installation
 
+### Quick install (recommended)
+```bash
+curl -fsSL https://raw.githubusercontent.com/ppotepa/ctxrun/main/install.sh | bash
+```
+
+Or with a specific version:
+```bash
+curl -fsSL https://raw.githubusercontent.com/ppotepa/ctxrun/main/install.sh | bash -s 0.1.0
+```
+
+The installer will:
+1. Detect your system (Linux, macOS)
+2. Try to install via npm (if available)
+3. Fallback to .deb on Debian/Ubuntu
+4. Fallback to tarball otherwise
+
+Requires Node.js >=20.
+
 ### npm
 ```bash
 npm install -g ctxrun
 ```
-
-Requires Node.js >=20.
 
 ### .deb (Debian/Ubuntu)
 Download from [GitHub Releases](https://github.com/ppotepa/ctxrun/releases):
