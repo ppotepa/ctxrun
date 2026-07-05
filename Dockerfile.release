@@ -1,0 +1,72 @@
+# Dockerfile for building ctxrun .deb packages
+# Usage: docker build -f Dockerfile.release -t ctxrun-builder . --build-arg VERSION=0.1.0
+# Then: docker run --rm -v $(pwd)/dist/release:/dist/release ctxrun-builder
+FROM debian:12-slim
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl ca-certificates gnupg \
+    build-essential ruby ruby-dev \
+    npm git \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install fpm for .deb building
+RUN gem install fpm -N
+
+# Install Node.js
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
+    apt-get install -y nodejs && \
+    rm -rf /var/lib/apt/lists/*
+
+WORKDIR /tmp/ctxrun-build
+COPY package.json package-lock.json tsconfig.json LICENSE README.md ./
+COPY src ./src
+
+# Build the app
+RUN npm ci && npm run build
+
+# Create a staging directory with the final structure
+RUN mkdir -p /tmp/staging/usr/bin /tmp/staging/usr/share/doc/ctxrun
+
+# Copy the compiled code to staging
+RUN cp -r dist /tmp/staging/usr/lib/ctxrun && \
+    cp package.json /tmp/staging/usr/lib/ctxrun/ && \
+    cp LICENSE /tmp/staging/usr/lib/ctxrun/ && \
+    cp README.md /tmp/staging/usr/lib/ctxrun/
+
+# Create a wrapper script that runs the installed package
+RUN mkdir -p /tmp/staging/usr/bin && \
+    printf '#!/bin/bash\nnode /usr/lib/ctxrun/dist/cli/index.js "$@"\n' > /tmp/staging/usr/bin/ctxrun && \
+    chmod +x /tmp/staging/usr/bin/ctxrun
+
+# Create output directory for .deb
+RUN mkdir -p /dist/release
+
+ARG VERSION=0.1.0
+ARG RELEASE=1
+
+# Build the .deb package
+RUN cd /tmp && \
+    fpm -s dir -t deb \
+      --name ctxrun \
+      --version "${VERSION}" \
+      --release "${RELEASE}" \
+      --architecture all \
+      --description "Run commands with an explicit user context across sudo/root boundaries." \
+      --url "https://github.com/ppotepa/ctxrun" \
+      --license MIT \
+      --maintainer "Paweł Potępa <pawel.potepa@hotmail.com>" \
+      --depends "nodejs (>= 20)" \
+      -C /tmp/staging \
+      -p /dist/release/ctxrun_${VERSION}-${RELEASE}_all.deb
+
+# Also create a tarball for direct use
+RUN tar -czf /dist/release/ctxrun-v${VERSION}.tar.gz \
+      -C /tmp/staging/usr/lib ctxrun \
+      -C /tmp/staging/usr/bin ctxrun
+
+# Generate SHA256SUMS
+WORKDIR /dist/release
+RUN sha256sum ctxrun*.deb ctxrun-v${VERSION}.tar.gz > SHA256SUMS
+
+# Make the directory available
+VOLUME /dist/release

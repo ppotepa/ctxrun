@@ -2,9 +2,9 @@ import { ResolvedRun } from "./types.js";
 import { detectUserContext } from "../user-context/detect.js";
 import { loadRegistry, findPlugin, findPreset } from "./registry.js";
 
-export function resolveRun(commandOrPreset: string, args: string[]): ResolvedRun {
-  const ctx = detectUserContext();
-  const registry = loadRegistry();
+export function resolveRun(commandOrPreset: string, args: string[], profileName?: string): ResolvedRun {
+  const ctx = detectUserContext(process.env, profileName);
+  const registry = loadRegistry({ targetHome: ctx.targetHome });
   const preset = findPreset(registry, commandOrPreset);
   const command = preset?.command ?? commandOrPreset;
   const pluginNames = preset?.plugins ?? inferPlugins(command);

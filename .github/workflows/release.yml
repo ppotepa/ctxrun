@@ -1,0 +1,58 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm run test:unit
+
+      - name: Build release artifacts
+        run: bash scripts/build-release.sh
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: dist/release/*
+          body: |
+            ## Changes
+            See the commit log for details.
+            
+            ## Installation
+            
+            ### npm
+            ```bash
+            npm install -g ctxrun
+            ```
+            
+            ### .deb (Debian/Ubuntu)
+            ```bash
+            sudo dpkg -i ctxrun_*.deb
+            ```
+            
+            ### Manual (tarball)
+            Extract and add to PATH:
+            ```bash
+            tar xzf ctxrun-v*.tar.gz
+            export PATH=$PATH:$(pwd)/ctxrun/dist/cli
+            ```
+        draft: false

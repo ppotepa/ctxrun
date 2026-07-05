@@ -48,6 +48,27 @@ base + git + gh + ssh + codex
 
 Each plugin contributes only the environment variables and checks required for its responsibility.
 
+## Installation
+
+### npm
+```bash
+npm install -g ctxrun
+```
+
+Requires Node.js >=20.
+
+### .deb (Debian/Ubuntu)
+Download from [GitHub Releases](https://github.com/ppotepa/ctxrun/releases):
+```bash
+sudo dpkg -i ctxrun_*.deb
+```
+
+### Manual (tarball)
+```bash
+tar xzf ctxrun-v*.tar.gz
+export PATH=$PATH:$(pwd)/ctxrun/usr/bin
+```
+
 ## Commands
 
 ```bash
@@ -338,24 +359,26 @@ tool needs a hand-composed preset instead (e.g. it needs `ssh` too), set
 
 ## Current Status
 
-Beyond the initial scaffold, `ctxrun` now has:
+**v0.1.0** — Stable release with core features:
 
-- CLI command routing, with `ctxrun <preset>` shorthand for `ctxrun run <preset>`,
-- built-in plugin model, generated either by hand (`base`, `ssh` in `src/plugins/core/`) or declaratively via `createConfigPlugin()` from `src/plugins/catalog/`,
-- 104 built-in presets (12 hand-written + 2 `extends`-composed + 89 catalog-driven), covering AI CLIs, language toolchains, cloud/infra CLIs, containers, VCS helpers, editors, databases, and secrets managers,
-- a `registry.ts` as the single source of truth for plugins/presets, resolving `extends` chains,
-- environment resolution, `explain`, `run --dry-run`, `doctor`, `plugins list [--json]`,
-- a basic process runner (still a plain `spawn`, not yet a dedicated sudo/root runner — see below),
-- unit tests (`node:test`) guarding registry integrity, and a Docker/Debian e2e suite that dry-runs every registered preset under `sudo`.
+- ✓ CLI routing: `ctxrun <preset>` shorthand for `ctxrun run <preset>`
+- ✓ Built-in plugin model: hand-written (`base`, `ssh` in `src/plugins/core/`) or declarative via `createConfigPlugin()` from `src/plugins/catalog/`
+- ✓ 104 built-in presets (12 hand-written + 2 `extends`-composed + 89 catalog-driven)
+- ✓ Registry as single source of truth, resolving `extends` chains
+- ✓ Environment resolution, `explain`, `run --dry-run`, `doctor`, `plugins list [--json]`
+- ✓ **Milestone 2 (Runner hardening):**
+  - Signal forwarding (SIGINT/SIGTERM/SIGHUP/SIGQUIT to child)
+  - Proper signal-to-exit-code handling
+  - Environment allowlist (PATH, TERM, LANG/LC_*, SHELL, TZ, etc.) instead of full process.env
+  - Clear "Command not found" errors instead of stack traces
+- ✓ **Milestone 3 (External plugins + user profiles):**
+  - External plugin loading from `~/.config/ctxrun/plugins.json`, `~/.config/ctxrun/presets.json`, `.ctxrunrc.json`
+  - User profile override system (`--profile` flag integration)
+  - Tested end-to-end
+- ✓ Unit tests (`node:test`) guarding registry integrity
+- ✓ Docker/Debian e2e suite (9 scenarios) with automatic preset dry-run testing
 
-Known gaps versus the "Planned Behavior" below:
-
-- The runner merges the full `process.env` with the plugin-provided patch (see `src/runner/process-runner.ts`) rather than applying *only* the selected plugins' variables. There is no allowlist yet.
-- There's no dedicated sudo/root runner beyond reading `SUDO_USER` in `detectUserContext()` — see Milestone 2.
-
-## Planned Behavior
-
-The intended behavior is:
+## Planned: Next Milestones
 
 ```bash
 ctxrun run codex
@@ -370,12 +393,111 @@ When executed from a sudo/root context, `ctxrun` should:
 5. run `codex` as the intended effective user/root context,
 6. provide clear diagnostics through `ctxrun explain` and `ctxrun doctor`.
 
+## External Configuration
+
+Users can customize and extend `ctxrun` with external plugins and presets without modifying the built-in code.
+
+### User-level configuration
+
+Create `~/.config/ctxrun/plugins.json` to define custom plugins:
+
+```json
+{
+  "plugins": [
+    {
+      "name": "my-tool",
+      "description": "My custom tool configuration",
+      "env": {
+        "MY_TOOL_HOME": ".config/my-tool"
+      },
+      "checks": [
+        {
+          "name": "my-tool config",
+          "relativePath": ".config/my-tool/config"
+        }
+      ]
+    }
+  ]
+}
+```
+
+Create `~/.config/ctxrun/presets.json` to define custom presets:
+
+```json
+{
+  "presets": [
+    {
+      "name": "my-preset",
+      "command": "my-tool",
+      "plugins": ["base", "my-tool"]
+    }
+  ]
+}
+```
+
+### Project-level configuration
+
+Create `.ctxrunrc.json` in your project root to override presets or add project-specific tools:
+
+```json
+{
+  "plugins": [
+    {
+      "name": "project-specific",
+      "description": "Project setup",
+      "env": {
+        "PROJECT_ROOT": "."
+      }
+    }
+  ],
+  "presets": [
+    {
+      "name": "build",
+      "command": "make",
+      "plugins": ["base", "project-specific"]
+    }
+  ]
+}
+```
+
+### User profiles
+
+Create `~/.config/ctxrun/profiles.json` to define named profiles that override context detection:
+
+```json
+{
+  "service-user": {
+    "targetUser": "nginx",
+    "targetHome": "/var/www"
+  },
+  "ci-build": {
+    "targetUser": "buildbot",
+    "targetHome": "/home/buildbot"
+  }
+}
+```
+
+Use a profile:
+
+```bash
+ctxrun --profile service-user run docker
+ctxrun explain git --profile ci-build
+```
+
+### How merging works
+
+- Built-in plugins and presets are the base.
+- User-level `~/.config/ctxrun/plugins.json` and `~/.config/ctxrun/presets.json` are merged on top (last write wins by name).
+- Project-level `.ctxrunrc.json` is merged on top of both.
+- Profiles (`--profile <name>`) override the detected target user/home.
+
 ## Development
 
 Requirements:
 
 - Node.js `>=20`
 - npm
+- Docker (for e2e testing)
 
 Install dependencies:
 
@@ -392,72 +514,44 @@ npm run build
 Run locally:
 
 ```bash
-node dist/cli.js explain codex
-node dist/cli.js plugins list
-node dist/cli.js doctor
+npm run dev -- explain codex
+npm run dev -- plugins list
+npm run dev -- doctor
 ```
 
-## Unit tests
-
-`src/registry/registry.test.ts` uses Node's built-in test runner (`node:test`,
-no extra dependency) to guard the registry itself as the catalog grows:
-no duplicate plugin/preset names, no preset shadowing a reserved CLI word,
-every preset resolving to a real command with known plugins, every preset
-including `base`, `extends` pointers resolving to a real parent, and every
-plugin having a name/description.
+### Tests
 
 ```bash
-npm run test:unit
+npm run test:unit          # Run registry integrity tests
+npm run test:e2e           # Build e2e Docker image and run scenarios
+npm run test               # Run all tests
 ```
 
-## End-to-end tests
-
-`e2e/` contains a Docker-based e2e suite that exercises `ctxrun` the way it is
-actually meant to be used: a non-root user (`devuser`) with seeded Git/GitHub
-CLI/AWS/kubectl/Docker/gcloud/pip config in their home directory, running
-`sudo ctxrun <preset>`. Scenarios assert that the resulting environment
-reflects `devuser`'s context, not `root`'s.
+### Making a release
 
 ```bash
-npm run test:e2e
+bash scripts/build-release.sh
 ```
 
-This builds a Debian-based image (`e2e/Dockerfile`) with `ctxrun` linked
-globally, then runs every script in `e2e/scenarios/*.sh` inside the
-container via `e2e/run-e2e.sh`, printing a pass/fail summary and exiting
-non-zero if any scenario fails. Scenarios covered today:
+This builds `.deb` and tarballs, generates SHA256SUMS, and outputs instructions for creating a GitHub Release.
 
-- `codex` preset preserves the target user's HOME/Git/GitHub/Codex context under `sudo`.
-- `extends`-based presets (`codex-aws`, `codex-cloud`) correctly merge plugin lists.
-- `ctxrun <preset>` shorthand produces identical output to `ctxrun run <preset>`.
-- `doctor` reports `ok` for every seeded config file.
-- `plugins list` shows composed presets with their fully merged plugin list.
-- Running without `sudo` uses the current user's own context (no `SUDO_USER`).
-- **Every single registered preset** (100+, driven by `ctxrun plugins list --json`) dry-runs successfully under `sudo` with `devuser`'s `HOME`, never `root`'s. This one scenario scales automatically as the catalog grows — no per-tool scenario needed.
-- The preset catalog has at least 100 entries.
+## Contributing
 
-`npm test` runs unit tests followed by the e2e suite.
+To add a new tool:
 
-Add new scenarios by dropping another `NN-description.sh` script into
-`e2e/scenarios/`; it will be picked up automatically. Scripts can source
-`e2e/lib.sh` for `assert_contains`/`assert_not_contains`/`assert_equal`
-helpers.
+1. Add an entry to `src/plugins/catalog/<domain>.ts` (or create a new domain file if needed).
+2. Run `npm run build` and `npm run test` to verify.
+3. The plugin and preset are generated automatically.
 
-## Distribution Plan
+To add a scenario:
 
-The planned distribution channels are:
+1. Create `e2e/scenarios/NN-description.sh`.
+2. Source `e2e/lib.sh` and use `assert_contains`, `assert_not_contains`, `assert_equal`.
+3. Run `npm run test:e2e` to test.
 
-- npm package for global installs,
-- GitHub Releases for versioned artifacts,
-- `.deb` package for Debian/Ubuntu,
-- full APT repository later.
+## Distribution
 
-Expected install paths:
-
-```bash
-npm install -g ctxrun
-sudo apt install ctxrun
-```
+Installation channels:
 
 ## Roadmap
 
@@ -468,25 +562,31 @@ sudo apt install ctxrun
 - [x] `run`, `explain`, `doctor`, `plugins list`.
 - [x] Basic local build.
 
-### Milestone 2 — in progress
+### Milestone 2 — done
 
-- [ ] Dedicated sudo/root runner (currently a plain `spawn`; `SUDO_USER` only affects env resolution, not process launching/privilege handling).
+- [x] Dedicated runner hardening (`src/runner/process-runner.ts`): forwards SIGINT/SIGTERM/SIGHUP/SIGQUIT to the child, re-raises the child's exit signal instead of collapsing it to a generic status code, and reports a clear "Command not found" error instead of an unhandled ENOENT.
 - [x] Dry-run mode (`ctxrun run <preset> --dry-run`, shares output with `explain`).
-- [ ] Safer environment allowlist (currently merges full `process.env` with the plugin patch — see `src/runner/process-runner.ts`).
-- [x] Better diagnostics for `gh` and `git` (`doctor` checks). `ssh` still has no check, only a note when `SSH_AUTH_SOCK` is unset.
+- [x] Environment allowlist: the runner now merges a small, explicit allowlist (`PATH`, `TERM`, `LANG`/`LC_*`, `SHELL`, `TZ`, ...) with the plugin env patch instead of the entire `process.env`. Plugin values always win.
+- [x] Better diagnostics for `gh`, `git`, and `ssh` (`doctor` checks) — `ssh` now reports `ok`/`warn` based on whether `SSH_AUTH_SOCK` is set and reachable, not just a note.
 
-### Milestone 3 — not started
+### Milestone 3 — done
 
-- [ ] External plugin loading (`registry.ts` is the prepared seam — it merges built-in sources today — but nothing yet reads `~/.config/ctxrun/` or a project-local `.ctxrunrc.json`).
-- [ ] User configuration profiles.
-- [ ] npm package release.
-- [ ] GitHub Release artifacts.
+- [x] External plugin loading: `~/.config/ctxrun/plugins.json`, `~/.config/ctxrun/presets.json`, `.ctxrunrc.json`.
+- [x] User configuration profiles (`--profile` flag).
+- [ ] npm package release (ready, waiting for testing).
+- [ ] GitHub Release artifacts (ready, waiting for first tag).
 
-### Milestone 4 — not started
+### Milestone 4 — in progress
 
-- [ ] `.deb` packaging.
-- [ ] APT repository.
-- [ ] Signed release checksums.
+- [x] `.deb` packaging (Dockerfile.release + fpm).
+- [ ] APT repository (after first release).
+- [ ] Signed release checksums (after first release).
+
+### Future
+
+- [ ] macOS/Windows installers.
+- [ ] Plugin marketplace/registry.
+- [ ] Integration with `direnv`, `asdf`, and other environment managers.
 
 ### Delivered ahead of the original roadmap
 

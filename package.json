@@ -2,6 +2,15 @@
   "name": "ctxrun",
   "version": "0.1.0",
   "description": "Run commands with an explicit user context across sudo/root boundaries.",
+  "author": "Paweł Potępa <pawel.potepa@hotmail.com>",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ppotepa/ctxrun.git"
+  },
+  "homepage": "https://github.com/ppotepa/ctxrun",
+  "bugs": {
+    "url": "https://github.com/ppotepa/ctxrun/issues"
+  },
   "type": "module",
   "bin": {
     "ctxrun": "./dist/cli/index.js"

@@ -1,22 +1,37 @@
 import { CtxPlugin, Preset } from "./types.js";
 import { builtInPlugins } from "../plugins/index.js";
 import { builtInPresets } from "../presets/index.js";
+import { loadExternalConfig, mergeByName, externalPluginsToCtxPlugins } from "./external.js";
 
 /**
- * Single source of truth for plugins and presets.
- * Today it only merges built-in sources, but it is the seam where
- * external sources (e.g. ~/.config/ctxrun/plugins/*.json, project-local
- * .ctxrunrc.json) will be merged in later without touching resolve-run.ts.
+ * Single source of truth for plugins and presets. Merges built-in sources
+ * with external user-level (~/.config/ctxrun/) and project-local
+ * (.ctxrunrc.json) definitions when a UserContext-derived home directory is
+ * provided - see external.ts.
  */
 export interface Registry {
   plugins: CtxPlugin[];
   presets: Preset[];
 }
 
-export function loadRegistry(): Registry {
-  const plugins = [...builtInPlugins];
-  const presets = resolvePresetInheritance(builtInPresets);
-  return { plugins, presets };
+export interface LoadRegistryOptions {
+  /** Target user's home directory, used to look up ~/.config/ctxrun/. */
+  targetHome?: string;
+  /** Directory to look for a project-local .ctxrunrc.json. Defaults to process.cwd(). */
+  cwd?: string;
+}
+
+export function loadRegistry(options: LoadRegistryOptions = {}): Registry {
+  let plugins: CtxPlugin[] = [...builtInPlugins];
+  let presets: Preset[] = [...builtInPresets];
+
+  if (options.targetHome) {
+    const external = loadExternalConfig(options.targetHome, options.cwd ?? process.cwd());
+    plugins = mergeByName(plugins, externalPluginsToCtxPlugins(external.plugins));
+    presets = mergeByName(presets, external.presets);
+  }
+
+  return { plugins, presets: resolvePresetInheritance(presets) };
 }
 
 export function findPlugin(registry: Registry, name: string): CtxPlugin | undefined {

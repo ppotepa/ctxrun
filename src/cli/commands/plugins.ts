@@ -1,15 +1,19 @@
 import { loadRegistry } from "../../registry/registry.js";
+import { detectUserContext } from "../../user-context/detect.js";
+import { extractValueFlag } from "./args.js";
 
 export async function pluginsCommand(args: string[]): Promise<number> {
-  const [subcommand, ...rest] = args;
+  const { value: profileName, rest: afterProfile } = extractValueFlag(args, "--profile");
+  const [subcommand, ...rest] = afterProfile;
   const asJson = rest.includes("--json");
 
   if (subcommand !== "list") {
-    console.error("Usage: ctxrun plugins list [--json]");
+    console.error("Usage: ctxrun plugins list [--json] [--profile <name>]");
     return 1;
   }
 
-  const registry = loadRegistry();
+  const ctx = detectUserContext(process.env, profileName);
+  const registry = loadRegistry({ targetHome: ctx.targetHome });
 
   if (asJson) {
     console.log(

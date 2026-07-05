@@ -1,9 +1,11 @@
 import { detectUserContext } from "../../user-context/detect.js";
 import { loadRegistry } from "../../registry/registry.js";
+import { extractValueFlag } from "./args.js";
 
-export async function doctorCommand(_args: string[] = []): Promise<number> {
-  const ctx = detectUserContext();
-  const registry = loadRegistry();
+export async function doctorCommand(args: string[] = []): Promise<number> {
+  const { value: profileName, rest: _filteredArgs } = extractValueFlag(args, "--profile");
+  const ctx = detectUserContext(process.env, profileName);
+  const registry = loadRegistry({ targetHome: ctx.targetHome });
   let failed = false;
 
   console.log("Context:");
