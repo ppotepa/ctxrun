@@ -1,7 +1,10 @@
-import { Preset } from "../context/types.js";
-import { catalog } from "../plugins/catalog.js";
+import { Preset } from "../registry/types.js";
+import { catalog } from "../plugins/catalog/index.js";
 
-const handWrittenPresets: Preset[] = [
+// Presets that need a plugin combination the catalog can't express 1:1
+// (extra ssh/git/gh context, or an `extends` chain). Every other tool gets
+// its preset auto-generated below from a single catalog entry.
+const handComposedPresets: Preset[] = [
   {
     name: "codex",
     command: "codex",
@@ -39,48 +42,6 @@ const handWrittenPresets: Preset[] = [
     description: "Run Claude Code CLI as root while preserving user Git, GitHub CLI, SSH, and Claude context."
   },
   {
-    name: "npm",
-    command: "npm",
-    plugins: ["base", "npm"],
-    description: "Run npm with the target user's .npmrc and cache directory."
-  },
-  {
-    name: "cargo",
-    command: "cargo",
-    plugins: ["base", "cargo"],
-    description: "Run Cargo with the target user's toolchain and registry home."
-  },
-  {
-    name: "docker",
-    command: "docker",
-    plugins: ["base", "docker"],
-    description: "Run Docker CLI with the target user's config and credential store."
-  },
-  {
-    name: "kubectl",
-    command: "kubectl",
-    plugins: ["base", "kubectl"],
-    description: "Run kubectl with the target user's kubeconfig."
-  },
-  {
-    name: "aws",
-    command: "aws",
-    plugins: ["base", "aws"],
-    description: "Run AWS CLI with the target user's credentials and config."
-  },
-  {
-    name: "gcloud",
-    command: "gcloud",
-    plugins: ["base", "gcloud"],
-    description: "Run Google Cloud CLI with the target user's config directory."
-  },
-  {
-    name: "python",
-    command: "python3",
-    plugins: ["base", "python"],
-    description: "Run Python/pip with the target user's pip config and user base."
-  },
-  {
     name: "codex-aws",
     extends: "codex",
     plugins: ["aws"],
@@ -94,14 +55,17 @@ const handWrittenPresets: Preset[] = [
   }
 ];
 
-// One preset per catalog entry: `base` + the tool's own plugin, running the
-// tool's own binary. This is what gets ctxrun to ~100 everyday dev presets
-// without hand-writing each one.
-const catalogPresets: Preset[] = catalog.map((entry) => ({
-  name: entry.name,
-  command: entry.command,
-  plugins: ["base", entry.name],
-  description: entry.description
-}));
+// One preset per catalog entry (`base` + the tool's own plugin, running the
+// tool's own binary), unless the entry opted out because a hand-composed
+// preset above already covers it under the same name. This is what gets
+// ctxrun to ~100 everyday dev presets without hand-writing each one.
+const catalogPresets: Preset[] = catalog
+  .filter((entry) => entry.standalonePreset !== false)
+  .map((entry) => ({
+    name: entry.name,
+    command: entry.command,
+    plugins: ["base", entry.name],
+    description: entry.description
+  }));
 
-export const builtInPresets: Preset[] = [...handWrittenPresets, ...catalogPresets];
+export const builtInPresets: Preset[] = [...handComposedPresets, ...catalogPresets];

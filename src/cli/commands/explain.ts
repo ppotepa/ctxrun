@@ -1,4 +1,4 @@
-import { resolveRun } from "../context/resolve-run.js";
+import { resolveRun } from "../../registry/resolve-run.js";
 import { printResolvedRun } from "./format.js";
 
 export async function explainCommand(args: string[]): Promise<number> {
@@ -14,4 +14,3 @@ export async function explainCommand(args: string[]): Promise<number> {
 
   return 0;
 }
-

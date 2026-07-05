@@ -1,5 +1,5 @@
-import { detectUserContext } from "../context/user-context.js";
-import { loadRegistry } from "../context/registry.js";
+import { detectUserContext } from "../../user-context/detect.js";
+import { loadRegistry } from "../../registry/registry.js";
 
 export async function doctorCommand(_args: string[] = []): Promise<number> {
   const ctx = detectUserContext();

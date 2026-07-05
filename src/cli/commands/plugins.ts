@@ -1,4 +1,4 @@
-import { loadRegistry } from "../context/registry.js";
+import { loadRegistry } from "../../registry/registry.js";
 
 export async function pluginsCommand(args: string[]): Promise<number> {
   const [subcommand, ...rest] = args;

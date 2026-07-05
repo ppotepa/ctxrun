@@ -2,6 +2,12 @@ import os from "node:os";
 import { execFileSync } from "node:child_process";
 import { UserContext } from "./types.js";
 
+/**
+ * Detects the "real" user behind a possible `sudo` invocation and resolves
+ * their home directory. This is the only place that inspects `SUDO_USER` /
+ * `getuid()` / `getent passwd` - everything downstream (plugins, registry,
+ * runner) works off the resulting UserContext instead of process.env.
+ */
 export function detectUserContext(env: NodeJS.ProcessEnv = process.env): UserContext {
   const currentUid = typeof process.getuid === "function" ? process.getuid() : -1;
   const currentUser = os.userInfo().username;

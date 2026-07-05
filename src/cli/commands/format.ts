@@ -1,4 +1,4 @@
-import { ResolvedRun } from "../context/types.js";
+import { ResolvedRun } from "../../registry/types.js";
 
 export function printResolvedRun(resolved: ResolvedRun): void {
   console.log(`Command: ${resolved.command}`);

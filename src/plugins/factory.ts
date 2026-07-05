@@ -1,6 +1,6 @@
 import { access } from "node:fs/promises";
 import { constants } from "node:fs";
-import { CheckResult, CtxPlugin } from "../context/types.js";
+import { CheckResult, CtxPlugin } from "../registry/types.js";
 
 export interface ConfigCheckSpec {
   /** Check name reported by `ctxrun doctor`, e.g. "terraform.rc". */
@@ -22,8 +22,8 @@ export interface ConfigPluginSpec {
  * Builds a CtxPlugin from a declarative spec instead of hand-writing a full
  * plugin module. Used for tools that only need to point one or more env
  * vars at a path under the target user's home, plus optional readability
- * checks. Tools with more involved logic should still be hand-written
- * (see base.ts, ssh.ts, aws.ts) and registered directly in plugins/index.ts.
+ * checks. Tools with more involved logic (conditional env, reading process
+ * env, composing multiple sources) stay hand-written - see plugins/core/.
  */
 export function createConfigPlugin(spec: ConfigPluginSpec): CtxPlugin {
   return {

@@ -1,12 +1,4 @@
-export interface UserContext {
-  currentUid: number;
-  currentUser: string;
-  targetUser: string;
-  targetHome: string;
-  isRoot: boolean;
-  sudoUser?: string;
-  env: NodeJS.ProcessEnv;
-}
+import { UserContext } from "../user-context/types.js";
 
 export interface PluginEnvResult {
   env: Record<string, string>;

@@ -1,5 +1,5 @@
-import { resolveRun } from "../context/resolve-run.js";
-import { runProcess } from "../runner/process-runner.js";
+import { resolveRun } from "../../registry/resolve-run.js";
+import { runProcess } from "../../runner/process-runner.js";
 import { printResolvedRun } from "./format.js";
 
 export async function runCommand(args: string[]): Promise<number> {

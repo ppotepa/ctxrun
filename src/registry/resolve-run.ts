@@ -1,5 +1,5 @@
 import { ResolvedRun } from "./types.js";
-import { detectUserContext } from "./user-context.js";
+import { detectUserContext } from "../user-context/detect.js";
 import { loadRegistry, findPlugin, findPreset } from "./registry.js";
 
 export function resolveRun(commandOrPreset: string, args: string[]): ResolvedRun {
@@ -45,4 +45,3 @@ function inferPlugins(command: string): string[] {
 
   return ["base"];
 }
-

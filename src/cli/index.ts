@@ -3,11 +3,7 @@ import { runCommand } from "./commands/run.js";
 import { explainCommand } from "./commands/explain.js";
 import { doctorCommand } from "./commands/doctor.js";
 import { pluginsCommand } from "./commands/plugins.js";
-
-// Reserved top-level words that are never treated as a preset/command shorthand.
-// If a preset ever needs one of these names, it must be run explicitly via
-// `ctxrun run <name>`.
-const RESERVED_COMMANDS = new Set(["run", "explain", "doctor", "plugins"]);
+import { printHelp } from "./help.js";
 
 async function main(argv: string[]): Promise<number> {
   const [command, ...args] = argv;
@@ -32,28 +28,6 @@ async function main(argv: string[]): Promise<number> {
       // token isn't a reserved word above.
       return runCommand(argv);
   }
-}
-
-function printHelp(): void {
-  console.log(`ctxrun
-
-Usage:
-  ctxrun <preset|command> [...args] [--dry-run]   (shorthand for "run")
-  ctxrun run <preset|command> [...args] [--dry-run]
-  ctxrun explain <preset|command>
-  ctxrun doctor
-  ctxrun plugins list
-
-Examples:
-  ctxrun codex
-  ctxrun gh auth status
-  ctxrun codex-aws --dry-run
-  ctxrun run codex
-  ctxrun explain codex
-
-Reserved words (always treated as commands, not presets):
-  ${[...RESERVED_COMMANDS].join(", ")}
-`);
 }
 
 main(process.argv.slice(2))

@@ -1,4 +1,4 @@
-import { CtxPlugin } from "../context/types.js";
+import { CtxPlugin } from "../../registry/types.js";
 
 export const sshPlugin: CtxPlugin = {
   name: "ssh",

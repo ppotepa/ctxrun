@@ -4,7 +4,7 @@
   "description": "Run commands with an explicit user context across sudo/root boundaries.",
   "type": "module",
   "bin": {
-    "ctxrun": "./dist/cli.js"
+    "ctxrun": "./dist/cli/index.js"
   },
   "files": [
     "dist",
@@ -14,8 +14,8 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "check": "tsc -p tsconfig.json --noEmit",
-    "dev": "node --loader ts-node/esm src/cli.ts",
-    "test:unit": "npm run build && node --test dist/context/*.test.js",
+    "dev": "node --loader ts-node/esm src/cli/index.ts",
+    "test:unit": "npm run build && node --test dist/registry/*.test.js",
     "test:e2e:build": "docker build -f e2e/Dockerfile -t ctxrun-e2e .",
     "test:e2e": "npm run test:e2e:build && docker run --rm ctxrun-e2e",
     "test": "npm run test:unit && npm run test:e2e"

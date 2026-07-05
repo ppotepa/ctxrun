@@ -154,7 +154,7 @@ This keeps application-specific behavior outside the core while still giving use
 
 ### Registry
 
-The registry (`src/context/registry.ts`) is the single source of truth for
+The registry (`src/registry/registry.ts`) is the single source of truth for
 plugins and presets. It merges built-in sources today and is the seam where
 future external sources (user-level `~/.config/ctxrun/`, project-local
 `.ctxrunrc.json`) will be merged in without touching the resolution logic in
@@ -166,6 +166,67 @@ merged plugin lists and inheriting the parent's `command` when omitted.
 `ctxrun run <preset> --dry-run` resolves the environment and prints it
 without executing the target process. It shares its output formatting with
 `ctxrun explain`.
+
+### Project structure
+
+The source tree is organized by domain rather than by technical layer alone,
+so each subdomain is self-contained and new tool integrations only ever touch
+`src/plugins/catalog/`:
+
+```text
+src/
+  cli/                  entry point, help text, and command handlers
+    index.ts            argv parsing, shorthand dispatch
+    help.ts             help text + reserved command words
+    commands/
+      run.ts             `ctxrun run` (+ shorthand) / --dry-run
+      explain.ts          `ctxrun explain`
+      doctor.ts           `ctxrun doctor`
+      plugins.ts          `ctxrun plugins list` [--json]
+      format.ts           shared "resolved run" output formatting
+
+  user-context/         who is actually running ctxrun, and whose config to use
+    types.ts             UserContext
+    detect.ts             detects sudo/root, resolves target home directory
+
+  registry/             plugin/preset resolution - the seam for future
+                         external plugin sources
+    types.ts              CtxPlugin, Preset, ResolvedRun, ...
+    registry.ts            loadRegistry(), findPlugin/findPreset, extends resolution
+    resolve-run.ts          combines a preset/command + UserContext into a ResolvedRun
+    registry.test.ts        integrity tests (no dup names, no dangling extends, ...)
+
+  plugins/
+    factory.ts            createConfigPlugin(): declarative plugin builder
+    core/                 the only two plugins with custom logic
+      base.ts               HOME/USER/XDG_* from UserContext
+      ssh.ts                conditional SSH_AUTH_SOCK passthrough
+    catalog/               ~100 everyday dev tools, declared by domain
+      index.ts               merges all category arrays into `catalog`
+      types.ts                CatalogEntry (adds `command`, `standalonePreset`)
+      ai.ts                   codex, copilot, gemini, claude
+      vcs.ts                  git, gh, glab, hub, git-lfs, svn, hg
+      languages.ts            npm, cargo, python, go, yarn, pnpm, ...
+      cloud.ts                aws, gcloud, azure, terraform, helm, vault, ...
+      containers.ts           docker, kubectl, podman, buildah, ...
+      editors.ts              vim, neovim, tmux, starship, lazygit, ...
+      databases.ts            psql, mysql, mongosh, redis-cli, ...
+      secrets.ts              gpg, pass, op, bitwarden, sops
+      misc.ts                 curl, wget, httpie, keychain
+
+  presets/
+    index.ts               hand-composed presets (need extra plugins/extends)
+                           + one auto-generated preset per catalog entry
+
+  runner/
+    process-runner.ts      spawns the target process with the patched env
+```
+
+Everyday tools only ever require a new entry in the right `plugins/catalog/*.ts`
+file - a `CtxPlugin` and its matching preset (`base` + the tool) are generated
+automatically. Hand-written code (`plugins/core/`, `presets/index.ts`) is
+reserved for the small number of tools that need custom logic or a
+non-trivial plugin combination.
 
 ## Built-in Presets
 
@@ -251,8 +312,10 @@ SSH_AUTH_SOCK
 
 ### Everyday dev tool catalog
 
-Beyond the hand-written presets above, `src/plugins/catalog.ts` declares
-~90 additional presets for everyday developer CLIs — language toolchains
+Beyond the hand-composed presets above, `src/plugins/catalog/` declares
+~100 additional presets for everyday developer CLIs, split by domain into
+`languages.ts`, `cloud.ts`, `containers.ts`, `vcs.ts`, `editors.ts`,
+`databases.ts`, `secrets.ts`, `misc.ts`, and `ai.ts` — language toolchains
 (`go`, `gradle`, `pyenv`, `nvm`, `poetry`, ...), cloud/infra CLIs (`azure`,
 `terraform`, `pulumi`, `helm`, `vault`, ...), container tools (`podman`,
 `docker-compose`, ...), VCS helpers (`glab`, `hub`, `hg`, ...), editors/shell
@@ -261,22 +324,24 @@ tools (`vim`, `tmux`, `starship`, ...), databases (`psql`, `mysql`,
 more. Each is `base` + one declarative plugin built by
 `createConfigPlugin()` (`src/plugins/factory.ts`) from a small spec (env
 vars and/or config-file checks), instead of a hand-written module per tool.
-Combined with the hand-written presets, `ctxrun plugins list` reports over
-100 presets in total.
+`ctxrun plugins list` reports over 100 presets in total.
 
 Run `ctxrun plugins list --json` for a machine-readable dump of every
 plugin and preset — this is what the e2e suite uses to dry-run every single
 preset automatically (see below).
 
-To add a new tool, add one object to the `catalog` array; it becomes both a
-plugin and a preset with no further wiring.
+To add a new tool, add one object to the relevant `plugins/catalog/*.ts`
+file; it becomes both a plugin and a preset with no further wiring. If the
+tool needs a hand-composed preset instead (e.g. it needs `ssh` too), set
+`standalonePreset: false` on its catalog entry and add the preset to
+`presets/index.ts`.
 
 ## Current Status
 
 Beyond the initial scaffold, `ctxrun` now has:
 
 - CLI command routing, with `ctxrun <preset>` shorthand for `ctxrun run <preset>`,
-- built-in plugin model, generated either by hand (`base`, `git`, `gh`, `ssh`, `codex`, ...) or declaratively via `createConfigPlugin()` from `src/plugins/catalog.ts`,
+- built-in plugin model, generated either by hand (`base`, `ssh` in `src/plugins/core/`) or declaratively via `createConfigPlugin()` from `src/plugins/catalog/`,
 - 104 built-in presets (12 hand-written + 2 `extends`-composed + 89 catalog-driven), covering AI CLIs, language toolchains, cloud/infra CLIs, containers, VCS helpers, editors, databases, and secrets managers,
 - a `registry.ts` as the single source of truth for plugins/presets, resolving `extends` chains,
 - environment resolution, `explain`, `run --dry-run`, `doctor`, `plugins list [--json]`,
@@ -334,7 +399,7 @@ node dist/cli.js doctor
 
 ## Unit tests
 
-`src/context/registry.test.ts` uses Node's built-in test runner (`node:test`,
+`src/registry/registry.test.ts` uses Node's built-in test runner (`node:test`,
 no extra dependency) to guard the registry itself as the catalog grows:
 no duplicate plugin/preset names, no preset shadowing a reserved CLI word,
 every preset resolving to a real command with known plugins, every preset
@@ -428,6 +493,7 @@ sudo apt install ctxrun
 - `ctxrun <preset>` shorthand for `ctxrun run <preset>`.
 - Preset composition via `extends` (e.g. `codex-aws`, `codex-cloud`).
 - `plugins list --json` for machine-readable/scriptable output.
-- A ~90-entry declarative catalog (`src/plugins/catalog.ts` + `createConfigPlugin()`) covering everyday dev tools, bringing the total to 104 built-in presets.
+- A ~90-entry declarative catalog (`src/plugins/catalog/` + `createConfigPlugin()`) covering everyday dev tools, bringing the total to 104 built-in presets.
 - Unit tests (`node:test`) guarding registry integrity.
 - A Docker/Debian e2e suite (`e2e/`) that dry-runs every registered preset under `sudo` and asserts the target user's context is used.
+- Domain-oriented source layout (`cli/`, `user-context/`, `registry/`, `plugins/core/` + `plugins/catalog/<domain>.ts`) — see [Project structure](#project-structure).
