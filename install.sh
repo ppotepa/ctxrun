@@ -42,7 +42,10 @@ install_via_npm() {
     return 1
   fi
 
-  print_info "Installing ctxrun via npm..."
+  # NOTE: There is an unrelated 'ctxrun' package on npm by a different author.
+  # Our package is @ppotepa/ctxrun (scoped). The binary 'ctxrun' is provided
+  # by the package's bin field, same as installing from a tarball.
+  print_info "Installing ctxrun via npm (@ppotepa/ctxrun)..."
   
   # npm and Node require a valid cwd. cd to a safe dir in case the shell was
   # launched from a directory that no longer exists (e.g. curl | bash).
@@ -51,9 +54,9 @@ install_via_npm() {
 
   local npm_exit=0
   if [ "$VERSION" = "latest" ]; then
-    sudo npm install -g ctxrun || npm_exit=$?
+    sudo npm install -g @ppotepa/ctxrun || npm_exit=$?
   else
-    sudo npm install -g "ctxrun@$VERSION" || npm_exit=$?
+    sudo npm install -g "@ppotepa/ctxrun@$VERSION" || npm_exit=$?
   fi
 
   popd > /dev/null 2>&1 || true
@@ -173,11 +176,12 @@ main() {
   fi
   
   # Try installation methods in order of preference.
+  # Order: .deb (Debian/Ubuntu native) → tarball (universal) → npm (@ppotepa/ctxrun)
   # Note: these functions are called directly (not inside 'if') so that
   # set -e applies correctly inside them. We use || to handle failures.
-  install_via_npm && return 0 || true
   install_via_deb && return 0 || true
   install_via_tarball && return 0 || true
+  install_via_npm && return 0 || true
   
   print_error "Installation failed: no compatible method available"
   print_info "Please install Node.js >=20 first, then retry"

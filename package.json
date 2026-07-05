@@ -1,8 +1,8 @@
 {
-  "name": "ctxrun",
+  "name": "@ppotepa/ctxrun",
   "version": "0.1.2",
   "description": "Run commands with an explicit user context across sudo/root boundaries.",
-  "author": "Paweł Potępa <pawel.potepa@hotmail.com>",
+  "author": "Pawe\u0142 Pot\u0119pa <pawel.potepa@hotmail.com>",
   "repository": {
     "type": "git",
     "url": "https://github.com/ppotepa/ctxrun.git"
@@ -43,5 +43,8 @@
   "devDependencies": {
     "@types/node": "^20.0.0",
     "typescript": "^5.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }
