@@ -1,10 +1,23 @@
 #!/usr/bin/env node
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { join, dirname } from "node:path";
 import { runCommand } from "./commands/run.js";
 import { explainCommand } from "./commands/explain.js";
 import { doctorCommand } from "./commands/doctor.js";
 import { pluginsCommand } from "./commands/plugins.js";
 import { printHelp } from "./help.js";
 import { extractValueFlag } from "./commands/args.js";
+
+function getVersion(): string {
+  try {
+    const pkgPath = join(dirname(fileURLToPath(import.meta.url)), "../../package.json");
+    const pkg = JSON.parse(readFileSync(pkgPath, "utf-8")) as { version: string };
+    return pkg.version;
+  } catch {
+    return "unknown";
+  }
+}
 
 async function main(argv: string[]): Promise<number> {
   // Allow flags like --profile to appear before the subcommand name:
@@ -25,6 +38,10 @@ async function main(argv: string[]): Promise<number> {
       return doctorCommand([...args, ...profileSuffix]);
     case "plugins":
       return pluginsCommand([...args, ...profileSuffix]);
+    case "-v":
+    case "--version":
+      console.log(getVersion());
+      return 0;
     case "-h":
     case "--help":
     case undefined:
