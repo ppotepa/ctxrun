@@ -1,6 +1,6 @@
 {
   "name": "ctxrun",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Run commands with an explicit user context across sudo/root boundaries.",
   "author": "Paweł Potępa <pawel.potepa@hotmail.com>",
   "repository": {

@@ -44,12 +44,25 @@ install_via_npm() {
 
   print_info "Installing ctxrun via npm..."
   
+  # npm and Node require a valid cwd. cd to a safe dir in case the shell was
+  # launched from a directory that no longer exists (e.g. curl | bash).
+  local safe_dir="${HOME:-/tmp}"
+  pushd "$safe_dir" > /dev/null 2>&1 || cd /tmp
+
+  local npm_exit=0
   if [ "$VERSION" = "latest" ]; then
-    sudo npm install -g ctxrun
+    sudo npm install -g ctxrun || npm_exit=$?
   else
-    sudo npm install -g "ctxrun@$VERSION"
+    sudo npm install -g "ctxrun@$VERSION" || npm_exit=$?
   fi
-  
+
+  popd > /dev/null 2>&1 || true
+
+  if [ "$npm_exit" -ne 0 ]; then
+    print_info "npm install failed (exit $npm_exit), trying next method..."
+    return 1
+  fi
+
   print_success "ctxrun installed via npm"
   print_info "Command: ctxrun"
   print_info "Run: ctxrun --help"
@@ -71,13 +84,15 @@ install_via_deb() {
   fi
 
   if [ -z "$deb_url" ]; then
+    print_info "No .deb found in release, trying next method..."
     return 1
   fi
 
   print_info "Installing ctxrun via .deb..."
   
-  local temp_deb=$(mktemp)
-  trap "rm -f $temp_deb" EXIT
+  local temp_deb
+  temp_deb=$(mktemp /tmp/ctxrun-XXXXXX.deb)
+  trap "rm -f '$temp_deb'" RETURN
   
   curl -fsSL -o "$temp_deb" "$deb_url"
   sudo dpkg -i "$temp_deb"
@@ -102,13 +117,15 @@ install_via_tarball() {
   fi
 
   if [ -z "$tarball_url" ]; then
+    print_info "No tarball found in release, trying next method..."
     return 1
   fi
 
   print_info "Installing ctxrun via tarball..."
   
-  local temp_tar=$(mktemp)
-  trap "rm -f $temp_tar" EXIT
+  local temp_tar
+  temp_tar=$(mktemp /tmp/ctxrun-XXXXXX.tgz)
+  trap "rm -f '$temp_tar'" RETURN
   
   curl -fsSL -o "$temp_tar" "$tarball_url"
   
@@ -116,9 +133,10 @@ install_via_tarball() {
   sudo mkdir -p "$extract_dir"
   sudo tar -xzf "$temp_tar" -C "$extract_dir" --strip-components=1
   
-  # Create wrapper in /usr/local/bin
+  # Wrapper preserves SUDO_USER so ctxrun can detect the real user via sudo.
   sudo tee "$INSTALL_DIR/ctxrun" > /dev/null << 'WRAPPER'
 #!/bin/bash
+export SUDO_USER="${SUDO_USER:-}"
 exec node /usr/local/lib/ctxrun/dist/cli/index.js "$@"
 WRAPPER
   sudo chmod +x "$INSTALL_DIR/ctxrun"
@@ -130,6 +148,10 @@ WRAPPER
 }
 
 main() {
+  # Guard against broken cwd (e.g. when piped via curl from a deleted directory).
+  # Node/npm require a valid working directory; /tmp is always safe.
+  cd /tmp 2>/dev/null || true
+
   print_info "ctxrun installer (version: $VERSION)"
   
   local system
@@ -150,21 +172,15 @@ main() {
     exit 1
   fi
   
-  # Try installation methods in order of preference
-  if install_via_npm; then
-    return 0
-  fi
-  
-  if install_via_deb; then
-    return 0
-  fi
-  
-  if install_via_tarball; then
-    return 0
-  fi
+  # Try installation methods in order of preference.
+  # Note: these functions are called directly (not inside 'if') so that
+  # set -e applies correctly inside them. We use || to handle failures.
+  install_via_npm && return 0 || true
+  install_via_deb && return 0 || true
+  install_via_tarball && return 0 || true
   
   print_error "Installation failed: no compatible method available"
-  print_info "Please install Node.js >=20 first"
+  print_info "Please install Node.js >=20 first, then retry"
   exit 1
 }
 
