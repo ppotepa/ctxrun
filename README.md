@@ -37,7 +37,7 @@ Instead, `ctxrun` builds a minimal environment patch from application-specific p
 Example:
 
 ```bash
-ctxrun run codex
+ctxrun codex
 ```
 
 The `codex` preset can combine these plugins:
@@ -51,19 +51,25 @@ Each plugin contributes only the environment variables and checks required for i
 ## Commands
 
 ```bash
+ctxrun <preset|command> [...args] [--dry-run]   # shorthand for "run"
 ctxrun run <preset|command> [...args] [--dry-run]
 ctxrun explain <preset|command>
 ctxrun doctor
 ctxrun plugins list
 ```
 
+The first form is shorthand: `ctxrun codex` is equivalent to `ctxrun run codex`.
+Reserved top-level words (`run`, `explain`, `doctor`, `plugins`) are always
+treated as commands, never as preset names — a preset can't be named one of
+these.
+
 Examples:
 
 ```bash
-ctxrun run codex
-ctxrun run gh auth status
-ctxrun run git status
-ctxrun run codex-aws --dry-run
+ctxrun codex
+ctxrun gh auth status
+ctxrun git status
+ctxrun codex-aws --dry-run
 ctxrun explain codex
 ctxrun doctor
 ctxrun plugins list
