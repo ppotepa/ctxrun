@@ -273,17 +273,20 @@ plugin and a preset with no further wiring.
 
 ## Current Status
 
-This repository currently contains the initial TypeScript scaffold:
+Beyond the initial scaffold, `ctxrun` now has:
 
-- CLI command routing,
-- built-in plugin model,
-- built-in presets,
-- environment resolution,
-- `explain`,
-- `doctor`,
-- basic process runner.
+- CLI command routing, with `ctxrun <preset>` shorthand for `ctxrun run <preset>`,
+- built-in plugin model, generated either by hand (`base`, `git`, `gh`, `ssh`, `codex`, ...) or declaratively via `createConfigPlugin()` from `src/plugins/catalog.ts`,
+- 104 built-in presets (12 hand-written + 2 `extends`-composed + 89 catalog-driven), covering AI CLIs, language toolchains, cloud/infra CLIs, containers, VCS helpers, editors, databases, and secrets managers,
+- a `registry.ts` as the single source of truth for plugins/presets, resolving `extends` chains,
+- environment resolution, `explain`, `run --dry-run`, `doctor`, `plugins list [--json]`,
+- a basic process runner (still a plain `spawn`, not yet a dedicated sudo/root runner — see below),
+- unit tests (`node:test`) guarding registry integrity, and a Docker/Debian e2e suite that dry-runs every registered preset under `sudo`.
 
-The first implementation runs the target command with a patched environment. The next milestone is a stricter sudo/root runner.
+Known gaps versus the "Planned Behavior" below:
+
+- The runner merges the full `process.env` with the plugin-provided patch (see `src/runner/process-runner.ts`) rather than applying *only* the selected plugins' variables. There is no allowlist yet.
+- There's no dedicated sudo/root runner beyond reading `SUDO_USER` in `detectUserContext()` — see Milestone 2.
 
 ## Planned Behavior
 
@@ -393,29 +396,38 @@ sudo apt install ctxrun
 
 ## Roadmap
 
-### Milestone 1
+### Milestone 1 — done
 
-- TypeScript/npm scaffold.
-- Built-in plugin and preset model.
-- `run`, `explain`, `doctor`, `plugins list`.
-- Basic local build.
+- [x] TypeScript/npm scaffold.
+- [x] Built-in plugin and preset model.
+- [x] `run`, `explain`, `doctor`, `plugins list`.
+- [x] Basic local build.
 
-### Milestone 2
+### Milestone 2 — in progress
 
-- Dedicated sudo/root runner.
-- Dry-run mode.
-- Safer environment allowlist.
-- Better diagnostics for `gh`, `git`, and SSH.
+- [ ] Dedicated sudo/root runner (currently a plain `spawn`; `SUDO_USER` only affects env resolution, not process launching/privilege handling).
+- [x] Dry-run mode (`ctxrun run <preset> --dry-run`, shares output with `explain`).
+- [ ] Safer environment allowlist (currently merges full `process.env` with the plugin patch — see `src/runner/process-runner.ts`).
+- [x] Better diagnostics for `gh` and `git` (`doctor` checks). `ssh` still has no check, only a note when `SSH_AUTH_SOCK` is unset.
 
-### Milestone 3
+### Milestone 3 — not started
 
-- External plugin loading.
-- User configuration profiles.
-- npm package release.
-- GitHub Release artifacts.
+- [ ] External plugin loading (`registry.ts` is the prepared seam — it merges built-in sources today — but nothing yet reads `~/.config/ctxrun/` or a project-local `.ctxrunrc.json`).
+- [ ] User configuration profiles.
+- [ ] npm package release.
+- [ ] GitHub Release artifacts.
 
-### Milestone 4
+### Milestone 4 — not started
 
-- `.deb` packaging.
-- APT repository.
-- Signed release checksums.
+- [ ] `.deb` packaging.
+- [ ] APT repository.
+- [ ] Signed release checksums.
+
+### Delivered ahead of the original roadmap
+
+- `ctxrun <preset>` shorthand for `ctxrun run <preset>`.
+- Preset composition via `extends` (e.g. `codex-aws`, `codex-cloud`).
+- `plugins list --json` for machine-readable/scriptable output.
+- A ~90-entry declarative catalog (`src/plugins/catalog.ts` + `createConfigPlugin()`) covering everyday dev tools, bringing the total to 104 built-in presets.
+- Unit tests (`node:test`) guarding registry integrity.
+- A Docker/Debian e2e suite (`e2e/`) that dry-runs every registered preset under `sudo` and asserts the target user's context is used.
