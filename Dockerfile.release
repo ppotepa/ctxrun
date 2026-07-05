@@ -34,8 +34,9 @@ RUN cp -r dist /tmp/staging/usr/lib/ctxrun/ && \
     cp README.md /tmp/staging/usr/lib/ctxrun/
 
 # Create a wrapper script that runs the installed package
+# Preserve SUDO_USER environment so ctxrun can detect the real user even when run via sudo
 RUN mkdir -p /tmp/staging/usr/bin && \
-    printf '#!/bin/bash\nnode /usr/lib/ctxrun/dist/cli/index.js "$@"\n' > /tmp/staging/usr/bin/ctxrun && \
+    printf '#!/bin/bash\nexport SUDO_USER="${SUDO_USER:-}"\nnode /usr/lib/ctxrun/dist/cli/index.js "$@"\n' > /tmp/staging/usr/bin/ctxrun && \
     chmod +x /tmp/staging/usr/bin/ctxrun
 
 # Create output directory for .deb
