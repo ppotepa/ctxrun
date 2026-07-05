@@ -1,6 +1,7 @@
 import { Preset } from "../context/types.js";
+import { catalog } from "../plugins/catalog.js";
 
-export const builtInPresets: Preset[] = [
+const handWrittenPresets: Preset[] = [
   {
     name: "codex",
     command: "codex",
@@ -92,3 +93,15 @@ export const builtInPresets: Preset[] = [
     description: "Codex preset extended with AWS, Google Cloud, and kubectl context."
   }
 ];
+
+// One preset per catalog entry: `base` + the tool's own plugin, running the
+// tool's own binary. This is what gets ctxrun to ~100 everyday dev presets
+// without hand-writing each one.
+const catalogPresets: Preset[] = catalog.map((entry) => ({
+  name: entry.name,
+  command: entry.command,
+  plugins: ["base", entry.name],
+  description: entry.description
+}));
+
+export const builtInPresets: Preset[] = [...handWrittenPresets, ...catalogPresets];

@@ -249,6 +249,28 @@ GIT_CONFIG_GLOBAL
 SSH_AUTH_SOCK
 ```
 
+### Everyday dev tool catalog
+
+Beyond the hand-written presets above, `src/plugins/catalog.ts` declares
+~90 additional presets for everyday developer CLIs — language toolchains
+(`go`, `gradle`, `pyenv`, `nvm`, `poetry`, ...), cloud/infra CLIs (`azure`,
+`terraform`, `pulumi`, `helm`, `vault`, ...), container tools (`podman`,
+`docker-compose`, ...), VCS helpers (`glab`, `hub`, `hg`, ...), editors/shell
+tools (`vim`, `tmux`, `starship`, ...), databases (`psql`, `mysql`,
+`mongosh`, ...), secrets managers (`gpg`, `pass`, `op`, `bitwarden`), and
+more. Each is `base` + one declarative plugin built by
+`createConfigPlugin()` (`src/plugins/factory.ts`) from a small spec (env
+vars and/or config-file checks), instead of a hand-written module per tool.
+Combined with the hand-written presets, `ctxrun plugins list` reports over
+100 presets in total.
+
+Run `ctxrun plugins list --json` for a machine-readable dump of every
+plugin and preset — this is what the e2e suite uses to dry-run every single
+preset automatically (see below).
+
+To add a new tool, add one object to the `catalog` array; it becomes both a
+plugin and a preset with no further wiring.
+
 ## Current Status
 
 This repository currently contains the initial TypeScript scaffold:
@@ -307,6 +329,19 @@ node dist/cli.js plugins list
 node dist/cli.js doctor
 ```
 
+## Unit tests
+
+`src/context/registry.test.ts` uses Node's built-in test runner (`node:test`,
+no extra dependency) to guard the registry itself as the catalog grows:
+no duplicate plugin/preset names, no preset shadowing a reserved CLI word,
+every preset resolving to a real command with known plugins, every preset
+including `base`, `extends` pointers resolving to a real parent, and every
+plugin having a name/description.
+
+```bash
+npm run test:unit
+```
+
 ## End-to-end tests
 
 `e2e/` contains a Docker-based e2e suite that exercises `ctxrun` the way it is
@@ -330,6 +365,10 @@ non-zero if any scenario fails. Scenarios covered today:
 - `doctor` reports `ok` for every seeded config file.
 - `plugins list` shows composed presets with their fully merged plugin list.
 - Running without `sudo` uses the current user's own context (no `SUDO_USER`).
+- **Every single registered preset** (100+, driven by `ctxrun plugins list --json`) dry-runs successfully under `sudo` with `devuser`'s `HOME`, never `root`'s. This one scenario scales automatically as the catalog grows — no per-tool scenario needed.
+- The preset catalog has at least 100 entries.
+
+`npm test` runs unit tests followed by the e2e suite.
 
 Add new scenarios by dropping another `NN-description.sh` script into
 `e2e/scenarios/`; it will be picked up automatically. Scripts can source

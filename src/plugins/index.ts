@@ -14,8 +14,10 @@ import { kubectlPlugin } from "./kubectl.js";
 import { awsPlugin } from "./aws.js";
 import { gcloudPlugin } from "./gcloud.js";
 import { pythonPlugin } from "./python.js";
+import { createConfigPlugin } from "./factory.js";
+import { catalog } from "./catalog.js";
 
-export const builtInPlugins: CtxPlugin[] = [
+const handWrittenPlugins: CtxPlugin[] = [
   basePlugin,
   gitPlugin,
   ghPlugin,
@@ -32,3 +34,9 @@ export const builtInPlugins: CtxPlugin[] = [
   gcloudPlugin,
   pythonPlugin
 ];
+
+// Everyday CLI tools that only need a declarative env/checks spec are
+// generated from src/plugins/catalog.ts instead of being hand-written.
+const catalogPlugins: CtxPlugin[] = catalog.map((entry) => createConfigPlugin(entry));
+
+export const builtInPlugins: CtxPlugin[] = [...handWrittenPlugins, ...catalogPlugins];
